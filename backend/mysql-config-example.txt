@@ -1,0 +1,5 @@
+login
+password
+localhost
+3306
+dbname

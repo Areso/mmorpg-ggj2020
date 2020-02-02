@@ -1,0 +1,7 @@
+1) four portraits two for each race, one male one female
+2) one big background
+3) tiles: water, land, cliffs, sand
+4) objects: city, towers, mines, beacons - x2 for each race
+5) city screen, background
+6) city screen, objects: city hall, market, shipyard, bank, inn - x2 for each race
+7) ships: light, trade, battle -x2 for each race

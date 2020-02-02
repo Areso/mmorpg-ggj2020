@@ -1,0 +1,136 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+</head>
+<body>
+<table>
+  <select id="selectLng" size="1" onchange="reloadLang()">
+    <option id="optionLngEn" selected value="en-US">English</option>
+    <option id="optionLngRu"          value="ru-RU">Русский</option>
+  </select>
+  <tr>
+    <td><span id="lblRgCRegister">Register</span></td>
+    <td><span id="lblLgCLogin">Login</span></td>
+  </tr>
+  <tr>
+    <td><span id="lblRgLogin">Login</span><input type="text" id="inpRgLogin" tabindex="0"></input></td>
+    <td><span id="lblLgLogin">Login</span><input type="text" id="inpLgLogin" tabindex="1"></input></td>
+  </tr>
+  <tr>
+    <td><span id="lblRgPassword">Password</span><input type="password" id="inpRgPassword" tabindex="3"></input></td>
+    <td><span id="lblLgPassword">Password</span><input type="password" id="inpLgPassword" tabindex="4"></input></td>
+  </tr>
+  <tr>
+    <td><button id="btnRgRegister" onclick="register()" tabindex="2">Register</button></td>
+    <td><button id="btnRgLogin" onclick="login()" tabindex="5">Login</button></td>
+  </tr>
+</table>
+<br>
+<span id="lblRstPassword" style="display: none">Forgot password?</span><btn id="btnRstPassword" style="display: none">Reset the password</btn>
+<span id="lblRegSuccess" style="display: none">Registration completed</span>
+<span id="lblRegFail" style="display: none">Registration failed. This login is already in use</span>
+<span id="lblLgnFail" style="display: none">There is no user with such login and password</span>
+<script>
+  include = function (url, fn) {
+    var e = document.createElement("script");
+    e.onload = fn;
+    e.src = url;
+    e.async=true;
+    document.getElementsByTagName("head")[0].appendChild(e);
+  };
+  function register() {
+    dataToParse={};
+    var login = document.getElementById("inpRgLogin").value;
+    var password = document.getElementById("inpRgPassword").value;
+    dataToParse.login=login;
+    dataToParse.password=password;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        server_response_obj = JSON.parse(server_response);
+        if (server_response_obj.status==='login_success' || server_response_obj.status==='register_success') {
+          localStorage.setItem("mmotoken", server_response_obj.token);
+            window.location.href = "char.html";
+        } else {
+          if (server_response_obj.status==="error_the_login_is_in_use"){
+            document.getElementById("lblRegFail").style.display="inline";
+          }
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/register", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function login() {
+    dataToParse={};
+    var login = document.getElementById("inpLgLogin").value;
+    var password = document.getElementById("inpLgPassword").value;
+    dataToParse.login=login;
+    dataToParse.password=password;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        server_response_obj = JSON.parse(server_response);
+        if (server_response_obj.status==='login_success') {
+          localStorage.setItem("mmotoken", server_response_obj.token);
+          window.location.href = "char.html";
+        } else {
+          if (server_response_obj.status==="no_user_with_this_email_pass"){
+            document.getElementById("lblLgnFail").style.display="inline";
+          }
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/login", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function redirectPost(url, data) {
+    var form = document.createElement('form');
+    document.body.appendChild(form);
+    form.method = 'post';
+    form.action = url;
+      for (var name in data) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = data[name];
+        form.appendChild(input);
+      }
+      form.submit();
+    }
+    // redirectPost('http://www.example.com', { text: 'text\n\ntext' });
+  include('localization.js',function(){
+    loadStartLocale();
+    console.log('we are in first level include after loadStartLocale()');
+  });
+  function localeCallback(returnLanguage){
+    if (returnLanguage==='en-US') {
+      document.getElementById("selectLng").selectedIndex=0;
+    }
+    if (returnLanguage==='ru-RU') {
+      document.getElementById("selectLng").selectedIndex=1;
+    }
+    for (key in lc.flogin) {
+      if (lc.flogin.hasOwnProperty(key)) {
+        //console.log(key + " = " + lc.flogin[key]);
+        document.getElementById(key).innerText=lc.flogin[key];
+      }
+    }
+  }
+  function reloadLang() {
+    var x = document.getElementById("selectLng").selectedIndex;
+    var y = document.getElementById("selectLng").options;
+    language = y[x].value; //y[x].id, text, index
+    loadLocale(language);
+  }
+</script>
+</body>
+</html>

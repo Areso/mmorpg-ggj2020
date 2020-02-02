@@ -1,0 +1,187 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+</head>
+<body>
+<div id="divCreateChar" style="display: none">
+  <select id="selRace" size="1" onchange="selectRace()">
+    <option id="optRace1" selected value="race1">Blue Race</option>
+    <option id="optRace2"          value="race2">Green Race</option>
+  </select><br><br>
+  <img id="imgPortrait" src="resources/1001.png"><br>
+  <lbl id="lblChangePortrait">Change portrait</lbl><br>
+  <button id="btnChangePortraitPrev" onclick="prevImg()">Previous one</button>
+  <button id="btnChangePortraitNext" onclick="nextImg()">Next one</button><br>
+  <br>
+  <lbl id="lblCharname">Charname</lbl><br>
+  <input type="text" id="inpCharname"><br>
+  <lbl id="lblCreateFailUsed" style="display: none">Error. This charname is taken</lbl><br>
+  <br>
+  <button id="btnCreateChar" onclick="createChar()">Create</button><br>
+  <lbl id="lblCreateFailOther" style="display: none">Error. Check form data</lbl><br>
+</div>
+<div id="divSelectChar" style="display: none">
+  <select id="selChar" size="1" onchange="selectChar()">
+
+  </select><br>
+  <lbl id="lblSelectFail" style="display: none">Server error</lbl><br>
+  <br>
+  <button id="btnStartGame" onclick="startGame()">Start game</button>
+</div>
+<script>
+  include = function (url, fn) {
+    var e = document.createElement("script");
+    e.onload = fn;
+    e.src = url;
+    e.async=true;
+    document.getElementsByTagName("head")[0].appendChild(e);
+  };
+  window.onload = function() {
+    getToken();
+    loadCharList();
+    currentRace = 0;
+    currentImg = 0;
+    imagesRace1Length = 2;
+    imagesRace2Length = 2;
+    charSelected = 0;
+  };
+  function getToken() {
+    token = localStorage.getItem("mmotoken"); //try load
+  }
+  function loadCharList() {
+    dataToParse={};
+    dataToParse.token=token;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && this.status === 200) {
+        server_response = this.responseText;
+        console.log(server_response)
+        server_response_obj = JSON.parse(server_response);
+        if (server_response_obj.status.length === 0) {
+          document.getElementById("divCreateChar").style.display="block";
+          currentRace = 1;
+          currentImg = 1001;
+        } else {
+          document.getElementById("divSelectChar").style.display="block";
+          selChar = document.getElementById("selChar");
+          for(var j in server_response_obj.status) {
+            selChar.add(new Option(server_response_obj.status[j][1],server_response_obj.status[j][0]));
+          }
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/char_list", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function updateImg() {
+    document.getElementById("imgPortrait").src ="resources/"+currentImg+".png";
+  }
+  function selectRace () {
+    if (document.getElementById("optRace1").selected) {
+      currentRace = 1;
+      currentImg  = 1001;
+      updateImg();
+    }
+    if (document.getElementById("optRace2").selected) {
+      currentRace = 2;
+      currentImg  = 2001;
+      updateImg();
+    }
+  }
+  function prevImg() {
+    if (currentImg===1001 || currentImg===2001){
+      currentImg = currentRace*1000 + imagesRace1Length;
+    } else {
+      currentImg = currentImg - 1;
+    }
+    updateImg();
+  }
+  function nextImg() {
+    if (currentRace === 1) {
+      currentRaceImagesLength = imagesRace1Length;
+    }
+    if (currentRace === 2) {
+      currentRaceImagesLength = imagesRace2Length;
+    }
+    if (currentImg+1>currentRace*1000+currentRaceImagesLength) {
+      currentImg = currentRace*1000 + 1;
+    } else {
+      currentImg = currentImg + 1;
+    }
+    updateImg();
+  }
+  function createChar() {
+    dataToParse={};
+    dataToParse.token       = token;
+    dataToParse.race        = currentRace;
+    dataToParse.portrait    = currentImg;
+    dataToParse.charname    = document.getElementById("inpCharname").value;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response)
+        server_response_obj = JSON.parse(server_response);
+        if (server_response_obj.status === "OK") {
+          window.location.href = "main.html";
+        } else {
+          if (server_response_obj.status === "charnameTaken") {
+            document.getElementById("lblCreateFailUsed").style.display="inline";
+          } else {
+            document.getElementById("lblCreateFailOther").style.display="inline";
+          }
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/char_create", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function selectChar() {
+    dataToParse={};
+    dataToParse.token       = token;
+    dataToParse.char_id     = document.getElementById("selChar").value;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response)
+        server_response_obj = JSON.parse(server_response);
+        if (server_response_obj.status === "OK") {
+          charSelected = 1;
+          window.location.href = "main.html";
+        } else {
+          document.getElementById("lblSelectFail").style.display="inline";
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/char_select", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function startGame(){
+    if (charSelected===0) {
+      selectChar();
+    }
+    if (charSelected===1){
+      window.location.href = "main.html";
+    }
+  }
+  include('localization.js',function(){
+    loadStartLocale();
+    console.log('we are in first level include after loadStartLocale()');
+  });
+  function localeCallback(returnLanguage){
+    for (key in lc.chars) {
+      if (lc.chars.hasOwnProperty(key)) {
+        document.getElementById(key).innerText=lc.chars[key];
+      }
+    }
+  }
+</script>
+</body>
+</html>

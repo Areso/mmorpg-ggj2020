@@ -1,0 +1,7 @@
+The Roaring 20s - The visuals are in art deco style.
+Seriously, who are you? - Use the player name as a seed to randomize part of the play experience.
+
+Mod-ifiable - Make it possible for players to be able to mod your game, without them needing to rebuild the game executable from your source code.
+
+And Now, The Weather - Gameplay is somehow affected by the actual weather.
+https://openweathermap.org/current#geo

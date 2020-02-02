@@ -1,0 +1,661 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+</head>
+<body>
+<div id="currentOnline">0</div>
+<!--either it is player's turn or server's turn-->
+<span id="currentStatus">Player's turn</span><a href="index.html">to the login page</a>
+<div id="currentCounter">30</div><br>
+<span id="currentChar">Charname</span><span id="currentShip" style="margin-left: 30px;"></span><br>
+<span id="currentCharLevel">1</span><span id="currentAndMaxHP" style="margin-left: 30px;"></span><span id="currentAndMaxTeam" style="margin-left: 30px;"></span><br>
+<div id="lblTokenFail" style="display: none">Token failed. Please, relogin <a href="index.html">here</a></div>
+<div id="divTown" style="display: none;">
+  <canvas width="800" height="480" id="canvasTown" class="canvas" style="border:1px solid #000000; z-index:1;"></canvas>
+  <button id="btnLeaveTown" onclick="leaveTown()" style="display:none;">Leave town</button>
+</div>
+<div id="divGlobalMap" style="display: none;">
+  <canvas id="canvasMap" height="480" width="800" style="border:1px solid #000000;"></canvas>
+</div>
+<br><br>
+<script>
+  //THE ADVENTURE MAP
+  var canvas_map        = document.getElementById("canvasMap");
+  canvas_map.addEventListener("touchstart", tap_map);
+  canvas_map.addEventListener("mousedown", tap_map);
+  var ctx_map           = canvas_map.getContext("2d");
+  var tile_grass        = loadImage('resources/tiles/grass.png');//use forward slashes for Linux and Windows compatible. \ this slash works only in Windows.
+  var tile_sand         = loadImage('resources/tiles/sand.png');
+  var tile_snow         = loadImage('resources/tiles/snow.png');
+  var tile_water        = loadImage('resources/tiles/water.png');
+  //BLUE PORTS
+  var port_blue_left    = loadImage('resources/tiles/port-blue-left.png');//10
+  var port_blue_up      = loadImage('resources/tiles/port-blue-up.png');//11
+  var port_blue_right   = loadImage('resources/tiles/port-blue-right.png');//12
+  var port_blue_down    = loadImage('resources/tiles/port-blue-down.png');//13
+  //GREEN PORTS
+  var port_green_left   = loadImage('resources/tiles/port-green-left.png');//20
+  var port_green_up     = loadImage('resources/tiles/port-green-up.png');//21
+  var port_green_right  = loadImage('resources/tiles/port-green-right.png');//22
+  var port_green_down   = loadImage('resources/tiles/port-green-down.png');//23
+  //BLUE SHIPS
+  var warship_blue      = loadImage('resources/warship_blue.png');
+  var warship_green     = loadImage('resources/warship_green.png');
+  var repairship_blue   = loadImage('resources/repairship_blue.png');
+  var repairship_green  = loadImage('resources/repairship_green.png');
+
+  var canvas_town        = document.getElementById("canvasTown");
+  canvas_town.addEventListener("touchstart", tapInTown);
+  canvas_town.addEventListener("mousedown", tapInTown);
+  var ctx_map           = canvas_map.getContext("2d");
+  var ctx_town          = canvas_town.getContext("2d");
+  var townbg_green      = loadImage('resources/background_green.png');//use forward slashes for Linux and Windows compatible. \ this slash works only in Windows.
+  var townbg_blue       = loadImage('resources/background_blue.png');
+  var cityhall_green    = loadImage('resources/cityhall_green.png');
+  var cityhall_blue     = loadImage('resources/cityhall_blue.png');
+  var cityhallXB         = 186;
+  var cityhallYB         = 170;
+  var cityhallWB         = 278;
+  var cityhallHB         = 88;
+  var cityhallXG         = 303;
+  var cityhallYG         = 64;
+  var cityhallWG         = 124;
+  var cityhallHG         = 210;
+  var inn_green         = loadImage('resources/inn_green.png');
+  var inn_blue          = loadImage('resources/inn_blue.png');
+  var innXB = 595;
+  var innYB = 220;
+  var innWB = 183;
+  var innHB = 98;
+  var innXG = 27;
+  var innYG = 165;
+  var innWG = 120;
+  var innHG = 96;
+  var market_green      = loadImage('resources/market_green.png');
+  var market_blue       = loadImage('resources/market_blue.png');
+  var marketXB           = 22;
+  var marketYB   	    = 324;
+  var marketWB           = 259;
+  var marketHB           = 120;
+  var marketXG           = 31;
+  var marketYG   	    = 282;
+  var marketWG           = 218;
+  var marketHG           = 124;
+  var shipyard_green    = loadImage('resources/shipyard_green.png');
+  var shipyard_blue     = loadImage('resources/shipyard_blue.png');
+  var shipyardXB         = 404;
+  var shipyardYB	     = 323;
+  var shipyardWB         = 258;
+  var shipyardHB         = 113;
+  var shipyardXG         = 554;
+  var shipyardYG	     = 270;
+  var shipyardWG         = 187;
+  var shipyardHG         = 115;
+
+  var bank_green        = loadImage('resources/bank_green.png');
+  var bank_blue         = loadImage('resources/bank_blue.png');
+  var bankXB    = 457;
+  var bankYB    = 171;
+  var bankWB    = 135;
+  var bankHB    = 56;
+  var bankXG    = 459;
+  var bankYG    = 136;
+  var bankWG    = 161;
+  var bankHG    = 56;
+
+  ctx_map.globalAlpha=1;
+  buildingsInTownB=[];
+  buildingsInTownX=[];
+  buildingsInTownY=[];
+  buildingsInTownW=[];
+  buildingsInTownH=[];
+  function deleteFromArray (arrayToMod, indexToDelete) {
+		arrayLenght                = arrayToMod.length;
+		tArrayBeforeDeletedElement = arrayToMod.slice(0,indexToDelete);
+		tArrayAfterDeletedElement  = arrayToMod.slice(indexToDelete+1,arrayToMod.length);
+		tResultArray               = tArrayBeforeDeletedElement.concat(tArrayAfterDeletedElement);
+		return tResultArray;
+  }
+  function removeFromArrays (elementIndex) {
+		buildingsInTownB = deleteFromArray(buildingsInTownB, elementIndex);
+		buildingsInTownX = deleteFromArray(buildingsInTownX, elementIndex);
+		buildingsInTownY = deleteFromArray(buildingsInTownY, elementIndex);
+		buildingsInTownW = deleteFromArray(buildingsInTownW, elementIndex);
+		buildingsInTownH = deleteFromArray(buildingsInTownH, elementIndex);
+  }
+  function pushBuilding(buildingName, buildingX, buildingY, buildingW, buildingH){
+		if (buildingsInTownB.indexOf(buildingName)==-1) {
+			buildingsInTownB.push(buildingName);
+			buildingsInTownX.push(buildingX);
+			buildingsInTownY.push(buildingY);
+			buildingsInTownW.push(buildingW);
+			buildingsInTownH.push(buildingH);
+		}
+  }
+  function composite_gm() {
+    if  (playerCity === 1) {
+      console.log("draw the city");
+      document.getElementById("divTown").style.display="block";
+      document.getElementById("divGlobalMap").style.display="none";
+      ctx_town.clearRect(0, 0, 800, 480);
+      if (playerRace === 1) {
+        ctx_town.drawImage(townbg_blue, 0, 0);   //draw background
+        ctx_town.drawImage(cityhall_blue, cityhallXB, cityhallYB);
+        pushBuilding('cityhall', cityhallXB, cityhallYB, cityhallWB, cityhallHB);
+        ctx_town.drawImage(inn_blue, innXB, innYB);
+        pushBuilding('inn', innXB, innYB, innWB, innHB);
+        ctx_town.drawImage(market_blue, marketXB, marketYB);
+        pushBuilding('market', marketXB, marketYB, marketWB, marketHB);
+        ctx_town.drawImage(shipyard_blue, shipyardXB, shipyardYB);
+        pushBuilding('shipyard', shipyardXB, shipyardYB, shipyardWB, shipyardHB);
+        ctx_town.drawImage(bank_blue, bankXB, bankYB);
+        pushBuilding('bank', bankXB, bankYB, bankWB, bankHB);
+      }
+      if (playerRace === 2) {
+        ctx_town.drawImage(townbg_green, 0, 0);   //draw background
+        ctx_town.drawImage(cityhall_green, cityhallXG, cityhallYG);
+        pushBuilding('cityhall', cityhallXG, cityhallYG, cityhallWG, cityhallHG);
+        ctx_town.drawImage(inn_green, innXG, innYG);
+        pushBuilding('inn', innXG, innYG, innWG, innHG);
+        ctx_town.drawImage(market_green, marketXG, marketYG);
+        pushBuilding('market', marketXG, marketYG, marketWG, marketHG);
+        ctx_town.drawImage(shipyard_green, shipyardXG, shipyardYG);
+        pushBuilding('shipyard', shipyardXG, shipyardYG, shipyardWG, shipyardHG);
+        ctx_town.drawImage(bank_green, bankXG, bankYG);
+        pushBuilding('bank', bankXG, bankYG, bankWG, bankHG);
+      }
+      if (playerTutor === 0) {
+
+        alert(lc.main.visitCityHall);
+      }
+    } else {
+      document.getElementById("divTown").style.display="none";
+      document.getElementById("divGlobalMap").style.display="block";
+      ctx_map.clearRect(0, 0, 800, 480);
+      // try place hero at center of screen
+      camXL = playerPosX - Math.floor(config.sizeScrX / 2);
+      camXH = camXL + config.sizeScrX;
+      //console.log('game.heroX, camXL, camXH are '+game.heroX+', '+camXL+', '+camXH);
+      if (camXL < 0) {
+        camXL = 0;
+        camXH = config.sizeMapX - config.sizeScrX;
+        //console.log('override XL<0! game.heroX, camXL, camXH are '+game.heroX+', '+camXL+', '+camXH);
+      }
+      if (camXH > config.sizeMapX) {
+        camXL = config.sizeMapX - config.sizeScrX;
+        camXH = config.sizeMapX;
+        //console.log('override XH>SizeMapX! game.heroX, camXL, camXH are '+game.heroX+', '+camXL+', '+camXH);
+      }
+      camYL = playerPosY - Math.floor(config.sizeScrY / 2);
+      camYH = camYL + config.sizeScrY;
+      if (camYL < 0) {
+        camYL = 0;
+        camYH = config.sizeMapY - config.sizeScrY;
+      }
+      if (camYH > config.sizeMapY) {
+        camYL = config.sizeMapY - config.sizeScrY;
+        camYH = config.sizeMapY;
+      }
+      console.log('camYL, camYH are ' + camYL + ', ' + camYH);
+
+      for (i = 0; i < map_x; i++) {//config.sizeScrX
+        for (j = 0; j < map_y; j++) {//config.sizeScrY
+          if (gameMap[i + camXL][j + camYL] === 0) {
+            ctx_map.drawImage(tile_water, j * 48, i * 48);   //draw background, water
+          }
+          if (gameMap[i + camXL][j + camYL] === 2) {
+            ctx_map.drawImage(tile_grass, j * 48, i * 48);   //draw background, grass
+          }
+        }
+      }
+
+      already_draw = false;
+      i = 0;
+      j = 0;
+      for (i = 0; i < map_x; i++) {//config.sizeScrX
+        for (j = 0; j < map_y; j++) {//config.sizeScrY
+          if (gameMapObj[i + camXL][j + camYL] === 0) {
+            //ctx_map.drawImage(tile_water, i * 48, j * 48);   //draw background
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 30) {
+            ctx_map.drawImage(port_blue_left, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 30) {
+            ctx_map.drawImage(port_blue_up, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 30) {
+            ctx_map.drawImage(port_blue_right, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 30) {
+            ctx_map.drawImage(port_blue_down, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 40) {
+            ctx_map.drawImage(port_green_left, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 40) {
+            ctx_map.drawImage(port_green_up, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 40) {
+            ctx_map.drawImage(port_green_right, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 40) {
+            ctx_map.drawImage(port_green_down, j * 48, i * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 11) {//SHIP
+              ctx_map.drawImage(warship_blue, i * 48, j * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 12) {//SHIP
+              ctx_map.drawImage(repairship_blue, i * 48, j * 48);
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 21) {//SHIP
+              ctx_map.drawImage(warship_green, i * 48, j * 48);
+              console.log("draw warship x "+i.toString() +" y" + j.toString());
+          }
+          if (gameMapObj[i + camXL][j + camYL] === 22) {//SHIP
+              ctx_map.drawImage(repairship_green, i * 48, j * 48);
+          }
+        }
+      }
+
+      /*
+    //overlay buttons for mobile clients
+    if (game.isMobile===1){
+      arrow_lx = 100;
+      arrow_ly = 200;
+      arrow_ux = 200;
+      arrow_uy = 100;
+      arrow_dx = 200;
+      arrow_dy = 300;
+      arrow_rx = 300;
+      arrow_ry = 200;
+      arrow_size=80;
+      ctx_map.globalAlpha=0.5;
+      ctx_map.drawImage(arrow_l, arrow_lx, arrow_ly);
+      ctx_map.drawImage(arrow_u, arrow_ux, arrow_uy);
+      ctx_map.drawImage(arrow_d, arrow_dx, arrow_dy);
+      ctx_map.drawImage(arrow_r, arrow_rx, arrow_ry);
+      ctx_map.globalAlpha=1;
+    }
+    */
+    }
+  }
+  function getElementPosition (element) {
+    //thanks to William Alone
+    var parentOffset,
+        pos = {
+          x: element.offsetLeft,
+          y: element.offsetTop
+        };
+    if (element.offsetParent) {
+      parentOffset = getElementPosition(element.offsetParent);
+      pos.x += parentOffset.x;
+      pos.y += parentOffset.y;
+    }
+    return pos;
+  }
+  function tap_map (e) {
+    pos = getElementPosition(canvasMap);
+    loc = {};
+    if ('button' in e) {
+      button = e.button;
+    } else {
+      print('it is sensor screen tap');
+      //TO DO ADD SELECTOR LEFT / RIGHT TAP FOR SENSOR SCREENS
+      button = 0;
+    }
+    print(button);
+    tapX = e.targetTouches ? e.targetTouches[0].pageX : e.pageX;
+    tapY = e.targetTouches ? e.targetTouches[0].pageY : e.pageY;
+    canvasScaleRatio = canvas_map.width / canvas_map.offsetWidth;
+    loc.x = (tapX - 9) * canvasScaleRatio;
+    loc.y = (tapY - 125) * canvasScaleRatio;//PAY ATTENTION TO THE MAGIC NUMBERS
+    //TO DO !!!
+    //if any locx locy is below zero then
+    //set them to zero
+    coord_x = Math.floor(loc.x / 48);
+    coord_y = Math.floor(loc.y / 48);
+    if (coord_x < 0) {
+      coord_x = 0;
+    }
+    if (coord_y < 0) {
+      coord_y = 0;
+    }
+    print(loc.x);
+    print(loc.y);
+    print(coord_x);
+    print(coord_y);
+    print([coord_x, coord_y]);
+
+    if (coord_x + 1 <= map_x && coord_y + 1 <= map_y) {
+      if (coord_x === playerPosX && coord_y === playerPosY){
+      //
+      //if (gameMapObj[coord_y][coord_x] === player) {
+      //  //SELECT SHIP
+      //  print('clicked on the ship');
+        obj_selected = 1;
+      //}
+      }
+      if (obj_selected===1){
+        pathFind([coord_y, coord_x]);
+      }
+      /*
+      pathFind([coord_y, coord_x]);
+      if (gameMap[coord_y][coord_x] === 0 && obj_selected === 1) {
+        if (gameMapObj[coord_y][coord_x] === 0) {//THE CELL IS FREE AND IT IS A WATER SURFACE
+          print('clicked on the blank water');
+          //CALL SERVER FOR PATH FINDING
+          pathFind([coord_y, coord_x]);
+        }
+      }
+
+       */
+    }
+  }
+  function tapInTown (e) {
+	pos = getElementPosition(canvas_town);
+	loc = {};
+	tapX = e.targetTouches ? e.targetTouches[0].pageX : e.pageX;
+	tapY = e.targetTouches ? e.targetTouches[0].pageY : e.pageY;
+	canvasScaleRatio = canvas_town.width / canvas_town.offsetWidth;
+	loc.x = (tapX - 9) * canvasScaleRatio;
+	loc.y = (tapY - 125) * canvasScaleRatio;
+	for (bi=0;bi<buildingsInTownB.length;bi++){
+	  if (loc.x >= buildingsInTownX[bi] && loc.x <= buildingsInTownX[bi]+buildingsInTownW[bi]) {
+		if (loc.y >= buildingsInTownY[bi] && loc.y <= buildingsInTownY[bi]+buildingsInTownH[bi]) {
+          console.log(buildingsInTownB[bi]);
+          buildingClick(buildingsInTownB[bi]);
+        }
+      }
+	}
+  }
+  function nextTutor(){
+    dataToParse={};
+    dataToParse.token       = token;
+    if (playerTutor===2){
+      dataToParse.ship =  shipToBuy;
+    }
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        server_response_obj = JSON.parse(server_response);
+        if (this.status === 200) {
+          getPlayer(1);
+        } else {
+          document.getElementById("lblTokenFail").style.display="inline";
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/next_tutor", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function buildingClick(buildingName) {
+    var showAlert = true;
+    alertMsg = "";
+    if (playerTutor===0) {
+      showAlert = false;
+      if (buildingName === 'cityhall') {
+        // TODO localization
+        nextTutor();
+        alert(lc.main.mayorReplica1);
+        alert(lc.main.mayorReplica2);
+        alert(lc.main.mayorReplica3);
+        getPlayer(1);
+
+        // TODO call tutor +1
+
+      }
+      if (buildingName !== 'cityhall') {
+        alert(lc.main.mayorAwait);
+      }
+    } else if (playerTutor===1) {
+      showAlert = false;
+      if (buildingName === 'bank') {
+        nextTutor();
+        getPlayer(1);
+        alert(lc.main.bankerReplica1);
+        alert(lc.main.bankerReplica2);
+      }
+      if (buildingName !== 'bank') {
+        alert(lc.main.bankerAwait);
+      }
+    } else if (playerTutor===2) {
+      showAlert = false;
+      if (buildingName === 'shipyard') {
+        // TODO localization
+        shipToBuy = prompt(lc.main.shipbuilderReplica1,"1");
+        nextTutor();
+        getPlayer(1);
+        alert(lc.main.shipbuilderReplica2);
+      }
+      if (buildingName!=='shipyard'){
+        alert(lc.main.shipbuilderAwait);
+      }
+    } else if (playerTutor===3) {
+      showAlert = false;
+      if (buildingName === 'inn') {
+        nextTutor();
+        getPlayer(1);
+        alert(lc.main.innReplica1);
+      }
+      if (buildingName!=='inn'){
+        alert(lc.main.innAwait);
+      }
+    }
+    if (showAlert===true){
+      // TODO make this locale dependent
+      buildingMsg = lc.main.someBuilding.replace("%arg1", buildingName);
+      alert(buildingMsg);
+    }
+  }
+  function loadImage(src, onload) {
+    var img = new Image();
+    img.onload = onload;
+    img.src = src;
+    return img;
+  }
+</script>
+<script>
+  function leaveTown(){
+    dataToParse={};
+    dataToParse.token       = token;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        server_response_obj = JSON.parse(server_response);
+        if (this.status === 200) {
+          getPlayer(1);
+          getEnv(1);
+        } else {
+          document.getElementById("lblTokenFail").style.display="inline";
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/town_leave", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  /*
+  // Create WebSocket connection.
+  //const socket = new WebSocket('ws://armata.ga:5000/echo');
+  //function sendMsg(){
+  //  socket.send("test");
+  // }
+  // Connection opened
+  socket.addEventListener('open', function (event) {
+    socket.send('Hello Server!');
+  });
+
+  // Listen for messages
+  socket.addEventListener('message', function (event) {
+    console.log('Message from server ', event.data);
+  });*/
+  function print(msg){
+    console.log(msg);
+  }
+  include = function (url, fn) {
+    var e = document.createElement("script");
+    e.onload = fn;
+    e.src = url;
+    e.async=true;
+    document.getElementsByTagName("head")[0].appendChild(e);
+  };
+  window.onload = function() {
+    afterLoad=1;
+    getToken(afterLoad);
+    getPlayer(afterLoad);
+    getEnv();
+  };
+  var config = {
+    sizeMapX:5,//18
+    sizeScrX:5,//16
+    sizeMapY:5,//18
+    sizeScrY:5,//10
+  };
+  obj_selected = 0;
+  function pathFind(targetPoint) {
+    console.log("try pathfind call 5000");
+    dataToParse={};
+    dataToParse.token       = token;
+    dataToParse.target      = targetPoint;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        server_response_obj = JSON.parse(server_response);
+        if (this.status === 200) {
+          getEnv(1);
+        } else {
+          document.getElementById("lblTokenFail").style.display="inline";
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/path_find", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function getToken() {
+    token = localStorage.getItem("mmotoken"); //try load
+  }
+  function getPlayer(delayOption) {
+    dataToParse={};
+    dataToParse.token       = token;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+       if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        pl_server_response_obj = JSON.parse(server_response);
+        if (this.status === 200) {
+          document.getElementById("currentChar").innerHTML        = pl_server_response_obj.status.charname;
+          document.getElementById("currentCharLevel").innerHTML   = pl_server_response_obj.status.level;
+          document.getElementById("currentAndMaxHP").innerHTML    = pl_server_response_obj.status.hp_cur;
+          document.getElementById("currentAndMaxHP").innerHTML   += "/"+pl_server_response_obj.status.hp_max;
+          document.getElementById("currentAndMaxTeam").innerHTML  = pl_server_response_obj.status.team_cur;
+          document.getElementById("currentAndMaxTeam").innerHTML += "/"+pl_server_response_obj.status.team_cur;
+          playerPosX = pl_server_response_obj.status.locx;
+          playerPosY = pl_server_response_obj.status.locy;
+          playerPortrait = pl_server_response_obj.status.portrait;
+          playerRace = pl_server_response_obj.status.race;
+          playerCity = pl_server_response_obj.status.city;
+          playerGold = pl_server_response_obj.status.gold;
+          playerShip = pl_server_response_obj.status.ship;
+          playerHPcur = pl_server_response_obj.status.hp_cur;
+          playerHPmax = pl_server_response_obj.status.hp_max;
+          playerTMcur = pl_server_response_obj.status.team_cur;
+          playerTMmax = pl_server_response_obj.status.team_max;
+          playerTutor = pl_server_response_obj.status.tutor;
+          if (playerShip === 11 || playerShip=== 21){
+            document.getElementById("currentShip").innerHTML= lc.main.lblShiptypeBattle;
+            document.getElementById("btnLeaveTown").style.display="inline";
+          }
+          if (playerShip === 12 || playerShip=== 22){
+            document.getElementById("currentShip").innerHTML= lc.main.lblShiptypeRepair;
+            document.getElementById("btnLeaveTown").style.display="inline";
+          }
+          if (delayOption===1) {
+            setTimeout(composite_gm, 300);
+          }
+        } else {
+          document.getElementById("lblTokenFail").style.display="inline";
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/char_get", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  function getEnv(delayOption){
+    dataToParse={};
+    dataToParse.token       = token;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState === 4 && (this.status === 200 || this.status === 400)) {
+        server_response = this.responseText;
+        console.log(server_response);
+        server_response_obj = JSON.parse(server_response);
+        if (this.status === 200) {
+          //TERRAIN
+          gameMap = [];
+          map_x = server_response_obj.gmap.length;
+          map_y = server_response_obj.gmap[0].length;
+          for (var i=0;i<map_x;i++) {
+            gameMap.push([]);
+          }
+          i = 0;
+          for (var i = 0; i < map_x; i++) {
+            for (var j = 0; j < map_y; j++) {
+              gameMap[i][j] = server_response_obj.gmap[i][j];
+            }
+          }
+          //OBJECTS
+          gameMapObj = [];
+          i = 0;
+          for (var i=0;i<map_x;i++) {
+            gameMapObj.push([]);
+          }
+          i = 0;
+          j = 0;
+          for (var i = 0; i < map_x; i++) {
+            for (var j = 0; j < map_y; j++) {
+              gameMapObj[i][j] = server_response_obj.gobj[i][j];
+            }
+          }
+          if (delayOption===1) {
+            setTimeout(composite_gm, 300);
+          }
+
+        } else {
+          document.getElementById("lblTokenFail").style.display="inline";
+        }
+      }
+    };
+    payload = JSON.stringify(dataToParse);
+    xhttp.open("POST", "http://armata.ga:5000/env_get", true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(payload);
+  }
+  include('localization.js',function(){
+    loadStartLocale();
+    console.log('we are in first level include after loadStartLocale()');
+  });
+  function localeCallback(returnLanguage){
+    //for (key in lc.main) {
+    //  if (lc.main.hasOwnProperty(key)) {
+    //    document.getElementById(key).innerText=lc.main[key];
+    //  }
+    //}
+    document.getElementById("btnLeaveTown").innerText=lc.main.btnLeaveTown;
+  }
+</script>
+</body>
+</html>

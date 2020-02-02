@@ -1,0 +1,66 @@
+﻿register:
+/register (POST) {login, password}
+1) accept an inquery to register new user.
+2) check whether is user exists:
+	1) if yes, check password:
+		1) if password fits, do login
+		2) if password fail, do show alert “this login is already in use”
+	2) if no, do create new user, do login
+
+login:
+/register (POST) {login, password}
+1) accept an inquery to login
+2) create a token (sha hash from login/password/timestamp)
+3) send the token to the client
+4) check whether a character exists:
+	1) if yes, do send char=1 to client. So client will redirect a user to the game
+	2) if no, do send char=0 to client. So client will redirect a user to character creation
+
+char_load:
+/character_load (POST) {token}
+1) returns list of characters
+
+
+char_create:
+/character (POST) {token, charname, race, portrait}
+1) accept an inquery to create character
+2) check if the login has any characters
+	1) if yes, do return error
+	2) if no, check if whether this charname is taken
+		1) if yes, do return error “this charname is already in use”
+		2) if no, do create character, then redirect a user to the game
+
+open_game:
+return redirect to the game
+
+game:
+/game (POST) {token}
+1) return {game}
+	known map
+	visible map
+	{character}
+	game.state
+
+
+path_find:
+/path_find (POST) {token} {target}
+
+
+order_cancel:
+/path_find (POST) {token}
+
+
+
+chat:
+/chat (WS) {token, chat_id for upstream, msg }
+two-directional way of communication
+1) token, chat_id, msg
+2) charname, chat_id, msg
+
+think about aging, refreshing and deleting tokens
+think about closing the server to reboot it
+
+
+
+
+
